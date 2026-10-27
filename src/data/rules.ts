@@ -26,10 +26,10 @@ export const rules: Rule[] = [
     description: 'Оптовые продажи с заказами',
     condition: (answers) => {
       const sales = answers['sales_type'] as string[] || [];
-      return sales.includes('wholesale') && answers['warehouses'] !== '0';
+      return sales.includes('wholesale') && answers['need_stock'] === 'yes';
     },
     effect: {
-      addScore: { 'trade-kz': 35 }
+      addScore: { 'trade-kz': 20 }
     }
   },
   {
@@ -37,7 +37,7 @@ export const rules: Rule[] = [
     description: 'Общепит с рецептами и калькуляцией',
     condition: (answers) => answers['catering_process'] === 'yes',
     effect: {
-      addScore: { 'catering': 45 }
+      addScore: { 'unf': 15 }
     }
   },
   {
@@ -56,7 +56,7 @@ export const rules: Rule[] = [
       const sales = answers['sales_type'] as string[] || [];
       return (form === 'ip' || form === 'small') && 
              sales.includes('services') && 
-             answers['need_tax_kz'] === 'unsure';
+             answers['has_crm'] === 'yes';
     },
     effect: {
       addScore: { 'unf': 25 }
@@ -71,7 +71,7 @@ export const rules: Rule[] = [
       return (form === 'medium' || form === 'large') && 
              sales.includes('wholesale') && 
              answers['has_production'] === 'yes' &&
-             answers['warehouses'] === '4+';
+             answers['branches'] === '5+';
     },
     effect: {
       addScore: { 'complex': 40 }

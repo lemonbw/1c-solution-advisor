@@ -26,7 +26,7 @@ describe('Recommendation Engine', () => {
     expect(result.needsCombination).toBe(true);
   });
 
-  it('should recommend Catering for recipes', () => {
+  it('should direct catering businesses to a general solution and flag the industry fit for review', () => {
     const answers = {
       business_type: ['catering'],
       catering_process: 'yes',
@@ -34,9 +34,9 @@ describe('Recommendation Engine', () => {
       sales_type: ['services']
     };
     const result = engine.calculate(answers);
-    const hasCatering = result.primary.some(p => p.configId === 'catering') || 
-                        result.alternatives.some(a => a.configId === 'catering');
-    expect(hasCatering).toBe(true);
+    expect(result.primary.some(p => p.configId === 'unf')).toBe(true);
+    expect(result.primary.some(p => p.configId === 'catering')).toBe(false);
+    expect(result.primary.find(p => p.configId === 'unf')?.reasons.join(' ')).toContain('общепита');
   });
 
   it('should mark insufficient data when missing key info', () => {

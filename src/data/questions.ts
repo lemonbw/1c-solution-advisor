@@ -17,9 +17,9 @@ export const questions: Question[] = [
       { value: 'catering', label: 'Общественное питание' },
       { value: 'logistics', label: 'Логистика/доставка' },
       { value: 'construction', label: 'Строительство/подряд' },
-      { value: 'medicine', label: 'Медицина/аптека' },
-      { value: 'education', label: 'Образование' },
-      { value: 'horeca', label: 'HoReCa' },
+      { value: 'medicine', label: 'Медицина/аптека (потребуется отраслевое решение)' },
+      { value: 'education', label: 'Образование (потребуется отраслевое решение)' },
+      { value: 'horeca', label: 'HoReCa (гостиницы/рестораны/кафе)' },
       { value: 'agriculture', label: 'Сельское хозяйство' },
       { value: 'mixed', label: 'Смешанная деятельность' },
       { value: 'other', label: 'Другое' }
@@ -82,7 +82,7 @@ export const questions: Question[] = [
   {
     id: 'need_tax_kz',
     block: 'Бухгалтерский и налоговый учёт',
-    text: 'Требуется ли налоговый учёт и подготовка регламентированной отчётности в Казахстане?',
+    text: 'Нужно ли вести бухгалтерский/налоговый учёт и сдавать обязательную отчётность по правилам Казахстана?',
     type: 'single',
     required: true,
     options: [
@@ -147,7 +147,7 @@ export const questions: Question[] = [
   {
     id: 'need_stock',
     block: 'Склад и закупки',
-    text: 'Нужно ли вести учёт остатков?',
+    text: 'Нужно ли учитывать остатки товаров и материалов на складе?',
     type: 'single',
     required: true,
     options: [
@@ -166,11 +166,25 @@ export const questions: Question[] = [
       { value: 'no', label: 'Нет' }
     ]
   },
+  {
+    id: 'warehouse_count',
+    block: 'Склад и закупки',
+    text: 'Сколько складов или точек хранения нужно учитывать?',
+    type: 'single',
+    required: false,
+    options: [
+      { value: 'one', label: 'Один' },
+      { value: 'few', label: '2–5' },
+      { value: 'many', label: 'Более 5' },
+      { value: 'unknown', label: 'Пока не знаю' }
+    ],
+    showIf: (answers) => answers['need_stock'] === 'yes'
+  },
   // Д. Производство и общепит
   {
     id: 'has_production',
     block: 'Производство и общественное питание',
-    text: 'Есть ли собственное производство?',
+    text: 'Есть ли собственное производство (изготовление продукции/блюд)?',
     type: 'single',
     required: false,
     options: [
@@ -181,6 +195,20 @@ export const questions: Question[] = [
       const types = answers['business_type'] as string[] || [];
       return types.includes('production') || types.includes('catering') || types.includes('mixed');
     }
+  },
+  {
+    id: 'production_complexity',
+    block: 'Производство и общественное питание',
+    text: 'Насколько сложное производство нужно учитывать?',
+    type: 'single',
+    required: false,
+    options: [
+      { value: 'simple', label: 'Простое: выпуск по рецепту или спецификации' },
+      { value: 'stages', label: 'Несколько этапов, участков или цехов' },
+      { value: 'planning', label: 'Нужно планировать загрузку и потребности производства' },
+      { value: 'unknown', label: 'Пока не знаю' }
+    ],
+    showIf: (answers) => answers['has_production'] === 'yes' || (answers['business_type'] as string[] || []).includes('production')
   },
   {
     id: 'catering_process',
@@ -208,6 +236,19 @@ export const questions: Question[] = [
       { value: 'yes', label: 'Да' },
       { value: 'no', label: 'Нет' }
     ]
+  },
+  {
+    id: 'payroll_complexity',
+    block: 'Кадры и зарплата',
+    text: 'Нужны ли сложные кадровые процессы (графики, смены, несколько подразделений, штатное расписание)?',
+    type: 'single',
+    required: false,
+    options: [
+      { value: 'yes', label: 'Да' },
+      { value: 'no', label: 'Нет, нужен только базовый расчёт' },
+      { value: 'unknown', label: 'Не знаю' }
+    ],
+    showIf: (answers) => answers['need_payroll'] === 'yes'
   },
   // З. Текущие системы
   {

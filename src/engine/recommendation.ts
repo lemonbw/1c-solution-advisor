@@ -18,9 +18,7 @@ export class RecommendationEngine {
     }
     
     for (const rule of rules) {
-      if (rule.condition(answers)) {
-        this.applyEffect(rule.effect, scores, rule.description);
-      }
+      if (rule.condition(answers)) this.applyEffect(rule.effect, scores, rule.description);
     }
     
     if (answers["need_tax_kz"] === "yes") {
@@ -39,31 +37,35 @@ export class RecommendationEngine {
     }
     
     if (sales.includes("wholesale") || businessTypes.includes("wholesale")) {
-      scores["trade-kz"].score += answers["warehouses"] && answers["warehouses"] !== "0" ? 25 : 10;
-      if (answers["warehouses"] && answers["warehouses"] !== "0") {
-        scores["trade-kz"].reasons.push("Оптовые продажи со складским учётом");
-      }
+      scores["trade-kz"].score += answers["need_stock"] === "yes" ? 30 : 20;
+      scores["trade-kz"].reasons.push("Оптовые продажи и работа с заказами клиентов");
     }
     
     if (businessTypes.includes("ecommerce") || (answers["channels"] as string[] || []).includes("online")) {
       scores["unf"].score += 15;
       scores["trade-kz"].score += 10;
     }
+    if (answers["has_crm"] === "yes" || sales.includes("services")) {
+      scores["unf"].score += 20;
+      scores["unf"].reasons.push("Нужны управление клиентами, продажами или услугами в одной системе");
+    }
     
     if (businessTypes.includes("catering") || businessTypes.includes("horeca") || answers["catering_process"] === "yes") {
-      scores["catering"].score += 40;
-      scores["catering"].reasons.push("Процессы общественного питания");
+      scores["unf"].score += 20;
+      scores["unf"].reasons.push("Для общепита может подойти управление заказами, закупками и производством в УНФ; отраслевые требования нужно проверить");
     }
     
     if (answers["has_production"] === "yes" || businessTypes.includes("production")) {
       scores["complex"].score += 15;
-      if (answers["warehouses"] === "4+" || (answers["branches"] as string) === "5+") {
+      if (answers["production_complexity"] === "stages" || answers["production_complexity"] === "planning") scores["complex"].score += 20;
+      if ((answers["branches"] as string) === "5+") {
         scores["complex"].score += 15;
       }
     }
     
     if (answers["need_payroll"] === "yes") {
       scores["zup-kz"].score += 35;
+      if (answers["payroll_complexity"] === "yes") scores["zup-kz"].score += 10;
       scores["zup-kz"].reasons.push("Требуется расчёт зарплаты и кадровый учёт");
     }
     
@@ -71,6 +73,10 @@ export class RecommendationEngine {
     if (users === "21-50" || users === "50+") {
       scores["complex"].score += 10;
       scores["trade-kz"].score += 5;
+    }
+    if (answers["production_complexity"] === "planning" || (businessTypes.includes("production") && users === "50+")) {
+      scores["erp-kz"].score += 35;
+      scores["erp-kz"].reasons.push("Планирование сложного или масштабного производства — повод оценить ERP-класс");
     }
     
     const legal = answers["legal_entities"] as string;
@@ -108,33 +114,42 @@ export class RecommendationEngine {
       toClarify.push("Уточните каналы продаж (розница/опт/услуги)");
     }
     
-    const insufficientData = dataGaps.length > 2 || sortedScores.length === 0;
+    const insufficientData = dataGaps.length > 0 || sortedScores.length === 0;
     
     let needsCombination = false;
     let combinationReason: string | undefined;
     
-    if ((sales.includes("retail") || businessTypes.includes("retail")) && answers["need_tax_kz"] === "yes" && 
-        scores["retail-kz"].score > 15 && scores["buh-kz"].score > 15) {
+    const selected: string[] = [];
+    if ((sales.includes("retail") || businessTypes.includes("retail")) && answers["has_cash_sales"] === "yes") selected.push("retail-kz");
+    if ((sales.includes("wholesale") || businessTypes.includes("wholesale")) && answers["need_stock"] === "yes") selected.push("trade-kz");
+    if (answers["need_tax_kz"] === "yes") selected.push("buh-kz");
+    if (answers["need_payroll"] === "yes") selected.push("zup-kz");
+
+    if (selected.includes("retail-kz") && selected.includes("buh-kz")) {
       needsCombination = true;
-      combinationReason = "Розничные продажи часто требуют связки «Розница для Казахстана» + «Бухгалтерия для Казахстана» для полного покрытия торговых и учётных процессов";
+      combinationReason = "Для кассовых продаж и регламентированного учёта подходят специализированная «Розница для Казахстана» и «Бухгалтерия для Казахстана». Их можно использовать совместно через обмен данными.";
     }
-    
-    if ((sales.includes("wholesale") || businessTypes.includes("wholesale")) && answers["need_tax_kz"] === "yes" && 
-        scores["trade-kz"].score > 15 && scores["buh-kz"].score > 15) {
+    if (selected.includes("trade-kz") && selected.includes("buh-kz")) {
       needsCombination = true;
-      combinationReason = "Оптовая торговля требует связки «Управление торговлей для Казахстана» + «Бухгалтерия для Казахстана»";
+      combinationReason = "Для оперативного управления оптовой торговлей и регламентированного учёта можно связать «Управление торговлей для Казахстана» и «Бухгалтерию для Казахстана».";
     }
-    
-    if (businessTypes.includes("catering") && answers["need_tax_kz"] === "yes" && 
-        scores["catering"].score > 15 && scores["buh-kz"].score > 10) {
-      needsCombination = true;
-      combinationReason = "Для предприятий общепита часто требуется связка «Общепит» + «Бухгалтерия для Казахстана»";
+    if (selected.includes("retail-kz") && selected.includes("trade-kz")) needsCombination = true;
+    if (needsCombination && !combinationReason) {
+      combinationReason = "Для разных участков бизнеса могут потребоваться отдельные решения. Совместимость и обмены данных нужно проверить при проектировании системы.";
     }
+    if (!selected.length && answers["need_tax_kz"] === "no" && scores["unf"].score === 0 && (sales.includes("services") || answers["purchases"] === "yes")) {
+      scores["unf"].score += 20;
+      scores["unf"].reasons.push("УНФ стоит рассмотреть как единое решение для процессов малого бизнеса");
+    }
+    const fallbackScores = Object.values(scores).filter(s => s.score > 0).sort((a, b) => b.score - a.score);
+    const primaryIds = selected.length ? [...new Set(selected)] : fallbackScores.slice(0, 1).map(s => s.configId);
+    if (primaryIds.length > 1) needsCombination = true;
+    const primary = primaryIds.map(id => scores[id]).filter(Boolean);
     
     const result: RecommendationResult = {
-      primary: sortedScores.slice(0, needsCombination && sortedScores.length >= 2 ? 2 : 1),
-      additional: needsCombination ? [] : [],
-      alternatives: allScores.filter(s => s.score > 5 && !sortedScores.slice(0, needsCombination ? 2 : 1).includes(s)).slice(0, 2),
+      primary,
+      additional: [],
+      alternatives: allScores.filter(s => s.score > 5 && !primaryIds.includes(s.configId)).slice(0, 2),
       explanation: this.generateExplanation(sortedScores, needsCombination, combinationReason),
       needsCombination,
       combinationReason,
