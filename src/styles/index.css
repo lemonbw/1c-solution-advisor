@@ -114,11 +114,62 @@ input[type=\"text\"], textarea, select {
   color: #0c5460;
 }
 
+.hint, .catalog-note {
+  color: #596579;
+  line-height: 1.55;
+}
+
+.catalog-link {
+  border-top: 1px solid #e5e9ef;
+  margin-top: 24px;
+  padding-top: 18px;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.catalog-card {
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+  padding: 20px;
+  background: #fbfcfe;
+}
+
+.catalog-card h2 {
+  font-size: 19px;
+  color: #174f87;
+}
+
+.catalog-card p {
+  line-height: 1.55;
+}
+
+.clarification-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.clarification-item button {
+  flex: 0 0 auto;
+  margin-right: 0;
+}
+
 @media (max-width: 600px) {
   .container {
     padding: 10px;
   }
   .card {
     padding: 20px;
+  }
+  .clarification-item {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

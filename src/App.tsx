@@ -8,6 +8,8 @@ function App() {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [result, setResult] = useState<RecommendationResult | null>(null);
+  const [showCatalog, setShowCatalog] = useState(false);
+  const [isClarifying, setIsClarifying] = useState(false);
 
   const visibleQuestions = questions.filter(q => {
     if (!q.showIf) return true;
@@ -26,7 +28,21 @@ function App() {
     } else {
       const res = engine.calculate(answers);
       setResult(res);
+      setIsClarifying(false);
     }
+  };
+
+  const goToClarification = (questionId: string) => {
+    const questionIndex = visibleQuestions.findIndex(question => question.id === questionId);
+    if (questionIndex < 0) return;
+    setCurrentStep(questionIndex);
+    setResult(null);
+    setIsClarifying(true);
+  };
+
+  const returnToResult = () => {
+    setResult(engine.calculate(answers));
+    setIsClarifying(false);
   };
 
   const handleBack = () => {
@@ -39,7 +55,32 @@ function App() {
     setCurrentStep(0);
     setAnswers({});
     setResult(null);
+    setShowCatalog(false);
+    setIsClarifying(false);
   };
+
+  if (showCatalog) {
+    return (
+      <div className="container">
+        <div className="card">
+          <button className="secondary" onClick={() => setShowCatalog(false)}>← Назад к результату</button>
+          <h1>Другие конфигурации 1С</h1>
+          <p>Краткий справочник простыми словами. Подходящую редакцию, локализацию и интеграции проверяют под конкретные процессы компании.</p>
+          <div className="catalog-grid">
+            {configs.map(config => (
+              <article className="catalog-card" key={config.id}>
+                <h2>{config.name}</h2>
+                <p>{config.fullDescription}</p>
+                <p><strong>Для чего:</strong> {config.keyFeatures.join(", ")}.</p>
+                <p><strong>Что учитывать:</strong> {config.limitations.join("; ")}.</p>
+                <p className="catalog-note">{config.notes}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isAnswered = () => {
     if (!currentQuestion) return false;
@@ -71,12 +112,6 @@ function App() {
             </div>
           )}
           
-          {result.needsCombination && result.combinationReason && (
-            <div className="alert alert-info">
-              <strong>Комбинация конфигураций:</strong> {result.combinationReason}
-            </div>
-          )}
-          
           <h2>Рекомендуемые решения</h2>
           {result.primary.map(score => {
             const config = configs.find((c: any) => c.id === score.configId);
@@ -104,9 +139,15 @@ function App() {
           {result.dataGaps.length > 0 && (
             <div className="alert alert-warning">
               <strong>Что уточнить:</strong>
-              <ul>
-                {result.dataGaps.map((g, i) => <li key={i}>{g}</li>)}
-              </ul>
+              {result.dataGaps.map((gap, i) => {
+                const questionId = gap.includes("налогов") ? "need_tax_kz" : gap.includes("способ продаж") ? "sales_type" : null;
+                return (
+                  <div className="clarification-item" key={i}>
+                    <span>{gap}</span>
+                    {questionId && <button className="secondary" onClick={() => goToClarification(questionId)}>Уточнить ответ</button>}
+                  </div>
+                );
+              })}
             </div>
           )}
           
@@ -123,6 +164,9 @@ function App() {
             <button onClick={handleReset}>Начать новую консультацию</button>
             <button className="secondary" onClick={() => window.print()}>Распечатать отчёт</button>
           </div>
+          <div className="catalog-link">
+            <button className="secondary" onClick={() => setShowCatalog(true)}>Другие конфигурации</button>
+          </div>
         </div>
       </div>
     );
@@ -133,6 +177,7 @@ function App() {
       <div className="card">
         <h1>1С Solution Advisor</h1>
         <p>Подбор конфигураций 1С для клиентов в Казахстане</p>
+        <p className="hint">Подбор предварительный: анкета помогает сузить выбор, а не заменяет обследование процессов и проверку требований к локализации.</p>
         
         <div className="progress-bar">
           <div 
@@ -196,6 +241,7 @@ function App() {
             )}
             
             <div style={{ marginTop: "30px" }}>
+              {isClarifying && <button onClick={returnToResult}>Вернуться к результату</button>}
               <button onClick={handleBack} disabled={currentStep === 0} className="secondary">
                 Назад
               </button>
